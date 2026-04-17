@@ -13,43 +13,53 @@
 # limitations under the License.
 
 
+import os
+import pika
+
+
 class mqConsumerInterface:
-    def __init__(self, exchange_name: str) -> None:
-        # Save parameters to class variables
-
-        # Call setupRMQConnection
-
-        pass
+    def __init__(self, binding_key: str, exchange_name: str, queue_name: str) -> None:
+        self.binding_key = binding_key
+        self.exchange_name = exchange_name
+        self.queue_name = queue_name
+        self.setupRMQConnection()
 
     def setupRMQConnection(self) -> None:
-        # Set-up Connection to RabbitMQ service
-
-        # Establish Channel
-
-        # Create the exchange if not already present
-
-        pass
-
-    def bindQueueToExchange(self, queueName: str, topic: str) -> None:
-        # Bind Binding Key to Queue on the exchange
-
-        pass
+        con_params = pika.URLParameters(os.environ["AMQP_URL"])
+        self.connection = pika.BlockingConnection(parameters=con_params)
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(
+            exchange=self.exchange_name, exchange_type="topic"
+        )
 
     def createQueue(self, queueName: str) -> None:
-        # Create Queue if not already present
+        self.channel.queue_declare(queue=queueName)
+        self.channel.basic_consume(
+            queueName, self.on_message_callback, auto_ack=False
+        )
 
-        # Set-up Callback function for receiving messages
+    def bindQueueToExchange(self, queueName: str, topic: str) -> None:
+        self.channel.queue_bind(
+            queue=queueName,
+            exchange=self.exchange_name,
+            routing_key=topic,
+        )
 
-        pass
-
-    def on_message_callback(self, channel, method_frame, header_frame, body):
-        # De-Serialize JSON message object if Stock Object Sent
-
-        # Acknowledge And Print Message
-
-        pass
+    def on_message_callback(self, channel, method_frame, header_frame, body) -> None:
+        channel.basic_ack(method_frame.delivery_tag, False)
+        print(body.decode("utf-8"))
 
     def startConsuming(self) -> None:
-        # Start consuming messages
+        print(" [*] Waiting for messages. To exit press CTRL+C")
+        self.channel.start_consuming()
 
-        pass
+    def __del__(self) -> None:
+        print("Closing RMQ connection on destruction")
+        try:
+            self.channel.close()
+        except Exception:
+            pass
+        try:
+            self.connection.close()
+        except Exception:
+            pass

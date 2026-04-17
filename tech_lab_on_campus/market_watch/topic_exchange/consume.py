@@ -18,22 +18,16 @@ import sys
 from solution.consumer_sol import mqConsumer  # pylint: disable=import-error
 
 def main(sector: str, queueName: str) -> None:
-    
-    # Implement Logic to Create Binding Key from the ticker and sector variable -  Step 2
-    #
-    #                       WRITE CODE HERE!!!
-    #
-    
-    consumer = mqConsumer(binding_key=bindingKey,exchange_name="Tech Lab Topic Exchange",queue_name=queueName)    
+    bindingKey = f"{sector}.#"
+
+    consumer = mqConsumer(binding_key=bindingKey, exchange_name="Tech Lab Topic Exchange", queue_name=queueName)
     consumer.startConsuming()
-    
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Consume stock price updates for a sector.")
+    parser.add_argument("sector", help="Industry sector to subscribe to (e.g. tech, health)")
+    parser.add_argument("queue", help="Unique queue name for this consumer")
+    args = parser.parse_args()
 
-    # Implement Logic to read the sector and queueName string from the command line and save them - Step 1
-    #
-    #                       WRITE CODE HERE!!!
-    #
-
-    sys.exit(main(sector,queue))
+    sys.exit(main(args.sector, args.queue))
